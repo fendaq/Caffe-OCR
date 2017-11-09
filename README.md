@@ -6,7 +6,6 @@
 ---
 
 #### TODO:
-* add layer:<b> WarpCTCLossLayer
 * 修改data layer 增加对 <b>multi-label</b> 的支持
 
 #### DONE:
@@ -14,3 +13,4 @@
 * add layer:<b> transpose_layer
 * add layer:<b> reverse_layer,reverse_time_layer
 * add layer:<b> DenseBlock
+* add layer:<b> WarpCTCLossLayer
