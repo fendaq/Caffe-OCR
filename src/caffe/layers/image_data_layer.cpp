@@ -29,6 +29,7 @@ void ImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const int new_width  = this->layer_param_.image_data_param().new_width();
   const bool is_color  = this->layer_param_.image_data_param().is_color();
   string root_folder = this->layer_param_.image_data_param().root_folder();
+	const int label_num = this->layer_param_.image_data_param().label_num();
 
   CHECK((new_height == 0 && new_width == 0) ||
       (new_height > 0 && new_width > 0)) << "Current implementation requires "
@@ -37,13 +38,16 @@ void ImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
   const string& source = this->layer_param_.image_data_param().source();
   LOG(INFO) << "Opening file " << source;
   std::ifstream infile(source.c_str());
-  string line;
-  size_t pos;
-  int label;
-  while (std::getline(infile, line)) {
-    pos = line.find_last_of(' ');
-    label = atoi(line.substr(pos + 1).c_str());
-    lines_.push_back(std::make_pair(line.substr(0, pos), label));
+  string filename;
+	vector<int> label;
+	int temp;
+  while (infile >> filename) {
+		for (int label_id = 0; label_id < label_num; label_id++) {
+			infile >> temp;
+			label.push_back(temp);
+		}
+    lines_.push_back(std::make_pair(filename, label));
+		label.clear();
   }
 
   CHECK(!lines_.empty()) << "File is empty";
@@ -91,7 +95,9 @@ void ImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
   // label
-  vector<int> label_shape(1, batch_size);
+  //vector<int> label_shape(1, batch_size);
+	vector<int> label_shape(2, batch_size);
+	label_shape[1] = label_num;
   top[1]->Reshape(label_shape);
   for (int i = 0; i < this->prefetch_.size(); ++i) {
     this->prefetch_[i]->label_.Reshape(label_shape);
@@ -121,6 +127,7 @@ void ImageDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   const int new_width = image_data_param.new_width();
   const bool is_color = image_data_param.is_color();
   string root_folder = image_data_param.root_folder();
+	const int label_num = this->layer_param_.image_data_param().label_num();
 
   // Reshape according to the first image of each batch
   // on single input batches allows for inputs of varying dimension.
@@ -154,7 +161,12 @@ void ImageDataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     this->data_transformer_->Transform(cv_img, &(this->transformed_data_));
     trans_time += timer.MicroSeconds();
 
-    prefetch_label[item_id] = lines_[lines_id_].second;
+    //prefetch_label[item_id] = lines_[lines_id_].second;
+		CHECK_EQ(label_num, lines_[lines_id_].second.size()) <<
+			"The input label size is not match the prototxt setting.";
+		for (int label_id = 0; label_id < label_num; label_id++) {
+			prefetch_label[item_id * label_num + label_id] = lines_[lines_id_].second[label_id];
+		}
     // go to the next iter
     lines_id_++;
     if (lines_id_ >= lines_size) {

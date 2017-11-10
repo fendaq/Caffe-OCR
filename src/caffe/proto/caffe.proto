@@ -33,7 +33,7 @@ message Datum {
   optional int32 width = 3;
   // the actual image data, in bytes
   optional bytes data = 4;
-  optional int32 label = 5;
+  repeated int32 label = 5;
   // Optionally, the datum could also hold float data.
   repeated float float_data = 6;
   // If true data contains an encoded image that need to be decoded
@@ -308,7 +308,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 147 (last added: recurrent_param)
+// LayerParameter next available layer-specific ID: 148 (last added: center_loss_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -364,6 +364,7 @@ message LayerParameter {
   optional ArgMaxParameter argmax_param = 103;
   optional BatchNormParameter batch_norm_param = 139;
   optional BiasParameter bias_param = 141;
+	optional CenterLossParameter center_loss_param = 147;
   optional ConcatParameter concat_param = 104;
   optional ContrastiveLossParameter contrastive_loss_param = 105;
   optional ConvolutionParameter convolution_param = 106;
@@ -410,7 +411,7 @@ message LayerParameter {
   optional TransposeParameter transpose_param=8266710;
   optional ReverseParameter reverse_param = 160;
   optional ReverseTimeParameter reverse_time_param = 161;
-  optional DenseBlockParameter denseblock_param = 147;
+  optional DenseBlockParameter denseblock_param = 148;
   optional CTCDecoderParameter ctc_decoder_param = 158;
   optional CTCLossParameter ctc_loss_param = 159;
 
@@ -622,11 +623,21 @@ message ConcatParameter {
 }
 
 message BatchNormParameter {
-  // If false, accumulate global mean/variance values via a moving average. If
-  // true, use those accumulated values instead of computing mean/variance
-  // across the batch.
+  // If false, normalization is performed over the current mini-batch
+  // and global statistics are accumulated (but not yet used) by a moving
+  // average.
+  // If true, those accumulated mean and variance values are used for the
+  // normalization.
+  // By default, it is set to false when the network is in the training
+  // phase and true when the network is in the testing phase.
   optional bool use_global_stats = 1;
-  // How much does the moving average decay each iteration?
+  // What fraction of the moving average remains each iteration?
+  // Smaller values make the moving average decay faster, giving more
+  // weight to the recent values.
+  // Each iteration updates the moving average @f$S_{t-1}@f$ with the
+  // current mean @f$ Y_t @f$ by
+  // @f$ S_t = (1-\beta)Y_t + \beta \cdot S_{t-1} @f$, where @f$ \beta @f$
+  // is the moving_average_fraction parameter.
   optional float moving_average_fraction = 2 [default = .999];
   // Small value to add to the variance estimate so that we don't divide by
   // zero.
@@ -920,11 +931,13 @@ message ImageDataParameter {
   // data.
   optional bool mirror = 6 [default = false];
   optional string root_folder = 12 [default = ""];
+	optional uint32 label_num = 13 [default = 1];
 }
 
 message InfogainLossParameter {
   // Specify the infogain matrix source.
   optional string source = 1;
+  optional int32 axis = 2 [default = 1]; // axis of prob
 }
 
 message InnerProductParameter {
@@ -986,6 +999,7 @@ message MemoryDataParameter {
   optional uint32 channels = 2;
   optional uint32 height = 3;
   optional uint32 width = 4;
+	optional uint32 label_num = 5;
 }
 
 message MVNParameter {
@@ -1047,9 +1061,7 @@ message PythonParameter {
   // string, dictionary in Python dict format, JSON, etc. You may parse this
   // string in `setup` method and use it in `forward` and `backward`.
   optional string param_str = 3 [default = ''];
-  // Whether this PythonLayer is shared among worker solvers during data parallelism.
-  // If true, each worker solver sequentially run forward from this layer.
-  // This value should be set true if you are using it as a data layer.
+  // DEPRECATED
   optional bool share_in_parallel = 4 [default = false];
 }
 
@@ -1520,4 +1532,9 @@ message PReLUParameter {
   optional FillerParameter filler = 1;
   // Whether or not slope parameters are shared across channels.
   optional bool channel_shared = 2 [default = false];
+}
+message CenterLossParameter {
+	optional uint32 num_output = 1;
+	optional FillerParameter center_filler = 2;
+	optional int32 axis = 3 [default = 1];
 }

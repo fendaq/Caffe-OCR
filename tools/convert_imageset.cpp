@@ -71,16 +71,31 @@ int main(int argc, char** argv) {
   const bool encoded = FLAGS_encoded;
   const string encode_type = FLAGS_encode_type;
 
-  std::ifstream infile(argv[2]);
+  /*std::ifstream infile(argv[2]);
   std::vector<std::pair<std::string, int> > lines;
   std::string line;
   size_t pos;
   int label;
   while (std::getline(infile, line)) {
-    pos = line.find_last_of(' ');
-    label = atoi(line.substr(pos + 1).c_str());
-    lines.push_back(std::make_pair(line.substr(0, pos), label));
+	pos = line.find_last_of(' ');
+	label = atoi(line.substr(pos + 1).c_str());
+	lines.push_back(std::make_pair(line.substr(0, pos), label));
+  }*/
+  std::ifstream infile(argv[2]);
+  int label_num = atoi(argv[4]);
+  std::vector<std::pair<std::string, vector<int> > > lines;
+  std::string filename;
+  vector<int> label;
+  int temp;
+  while (infile >> filename) {
+		for (int label_id = 0; label_id < label_num; label_id++) {
+			infile >> temp;
+			label.push_back(temp);
+		}
+    lines.push_back(std::make_pair(filename, label));
+		label.clear();
   }
+
   if (FLAGS_shuffle) {
     // randomly shuffle data
     LOG(INFO) << "Shuffling data";
